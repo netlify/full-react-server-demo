@@ -1,0 +1,10 @@
+{
+  "presets": [
+    [
+      "react-app",
+      {
+        "runtime": "automatic"
+      }
+    ]
+  ]
+}
