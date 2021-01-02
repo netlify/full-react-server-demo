@@ -10,7 +10,7 @@ Make sure you have an internet reachable Postgres database that you're not too w
 
 Once you have that in place, copy the Postgress URI to the clipboard and you're ready to Deploy to Netlify:
 
-[<img src="" alt="Deploy to Netlify">](https://app.netlify.com/start/deploy?repository=https://github.com/netlify/full-react-server-demo)
+[<img src="https://www.netlify.com/img/deploy/button.svg" alt="Deploy to Netlify">](https://app.netlify.com/start/deploy?repository=https://github.com/netlify/full-react-server-demo)
 
 Enter your Postgress URI for the PG_URI when prompted.
 
