@@ -5,12 +5,14 @@ const {Pool} = require('pg');
 const startOfYear = require('date-fns/startOfYear');
 
 if (!process.env.PG_URI) {
-    console.error("You must set the env variable PG_URL")
+    console.error("You must set the env variable PG_URI")
     process.exit(1);
 }
 
-console.log("Creating pool")
-const pool = new Pool({connectionString: process.env.PG_URI, ssl: { rejectUnauthorized: false }});
+function connect() {
+  return new Pool({connectionString: process.env.PG_URI, ssl: { rejectUnauthorized: false }});
+}
+
 
 const now = new Date();
 const startOfThisYear = startOfYear(now);
@@ -57,6 +59,7 @@ notes in this app! These note live on the server in the \`notes\` folder.
 
 async function seed() {
   try {
+    const pool = connect();
     console.log("Dropping existing table")
     await pool.query(dropTableStatement);
     console.log("Creating new table")
@@ -71,4 +74,8 @@ async function seed() {
   }
 }
 
-seed();
+module.exports = {seed, connect};
+
+if (require.main === module) {
+  seed();
+}
