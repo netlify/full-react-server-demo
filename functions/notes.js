@@ -34,7 +34,9 @@ exports.handler = async function(event, context) {
                     return response(JSON.stringify(rows[0]))
                 }
 
-                const {rows} = await pool.query('select * from notes order by id desc');
+                const query = location && location.searchText ? [`select * from notes where title ilike $1 order by id desc`,
+                ['%' + location.searchText + '%']] : ['select * from notes order by id desc']
+                const {rows} = await pool.query.apply(pool, query);
                 return response(JSON.stringify(rows))
             case 'POST':
                 if (noteId) {
