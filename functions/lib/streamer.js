@@ -47,8 +47,9 @@ class Response {
     }
 
     on(event, handler) {
-        if (this.req) {
-            this.req.on(event, handler)
+        console.log("Registering event handler")
+        if (this._req) {
+            this._req.on(event, handler)
         } else {
             this._req_events.push({event, handler})
         }
@@ -115,6 +116,7 @@ export const streamer = (handler) =>
 
         handler(event, res, context)
 
+        console.log("Ran handler, now waiting for request to finish")
         return new Promise((resolve) => {
             res.on('finish', () => {
                 console.log('Done with request')
