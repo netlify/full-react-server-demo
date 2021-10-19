@@ -1,7 +1,6 @@
 //import { streamer } from "./src/lib/streamer";
 import http from 'http'
 import https from 'https'
-import { HTML, updateBlock } from "./templates";
 
 class Response {
     _req = null
