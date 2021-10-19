@@ -1,6 +1,8 @@
 const path = require("path")
 const webpack = require("webpack")
 
+console.log("Function build with env:", process.env)
+
 module.exports = {
   module: {
     rules: [
