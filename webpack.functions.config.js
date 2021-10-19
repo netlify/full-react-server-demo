@@ -1,7 +1,7 @@
 const path = require("path")
 const webpack = require("webpack")
 
-const url = process.env.BRANCH === process.env.MAIN ? process.env.URL : process.env.DEPLOY_PRIME_URL
+const url = process.env.CONTEXT === "production" ? process.env.URL : process.env.DEPLOY_PRIME_URL
 
 module.exports = {
   module: {
