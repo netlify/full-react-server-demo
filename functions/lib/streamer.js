@@ -4,6 +4,7 @@ import streams from 'memory-streams';
 
 class Response {
     _req = null
+    _req_events = []
     _headers = {}
     _ip = null
     _url = null
@@ -46,7 +47,11 @@ class Response {
     }
 
     on(event, handler) {
-        this.req.on(event, handler)
+        if (this.req) {
+            this.req.on(event, handler)
+        } else {
+            this._req_events.push({event, handler})
+        }
     }
 
     _doRequest() {
@@ -71,6 +76,10 @@ class Response {
         this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options) : http.request(this._url, options)
         this._req.on('error', console.error)
         this._req.on('response', (resp) => console.log('got resp:', resp))
+        this._req_events.forEach((e) => {
+            this._req.on(e.event, e.handler)
+        })
+        this._req_events = null
     }
 }
 
