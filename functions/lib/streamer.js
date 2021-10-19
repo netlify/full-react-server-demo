@@ -40,7 +40,7 @@ class Response {
     }
 
     end() {
-        console.log("End stream", data)
+        console.log("End stream")
         this._doRequest()
 
         return this._req.end()
