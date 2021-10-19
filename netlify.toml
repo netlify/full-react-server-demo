@@ -10,6 +10,12 @@
     framework = "#custom"
 
 [[redirects]]
+    from = "/notes"
+    to = "/.netlify/functions/notes"
+    status = 200
+    force = true
+
+[[redirects]]
     from = "/notes/*"
     to = "/.netlify/streamers/notes"
     status = 200
