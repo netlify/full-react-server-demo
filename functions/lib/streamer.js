@@ -19,6 +19,7 @@ class Response {
         if (this._req) {
             throw("Cannot set status after first write")
         }
+        console.log("Setting status", code)
         this._headers[`s-status`] = code
     }
 
@@ -26,16 +27,19 @@ class Response {
         if (this._req) {
             throw("Cannot set headers after first write")
         }
+        console.log("Setting header", key, value)
         this._headers[`s-${key}`] = value
     }
 
     write(data) {
+        console.log("Writing to stream", data)
         this._doRequest()
 
         this._req.write(data)
     }
 
     end() {
+        console.log("End stream", data)
         this._doRequest()
 
         this._req.end()
@@ -45,12 +49,15 @@ class Response {
         if (event === 'drain') {
             console.log("Got drain handler, triggering next tick")
             process.nextTick(handler)
+        } else {
+            console.log("unkown handler", event)
         }
     }
 
     _doRequest() {
         if (this._req) { return }
 
+        console.log("Starting streaming request")
         const parsedUrl = new URL(this._url)
         const family = 4
         const ip = this._ip
