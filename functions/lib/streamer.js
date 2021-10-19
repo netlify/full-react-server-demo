@@ -81,7 +81,7 @@ export const streamer = (handler) =>
                 status = code
             }
 
-            return Promise(async (resolve, reject) => {
+            return new Promise(async (resolve, reject) => {
                 writer.on('finish', () => resolve({
                     statusCode: status,
                     body: writer.toString(),
