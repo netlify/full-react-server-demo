@@ -88,7 +88,7 @@ export const streamer = (handler) =>
                     headers: headers
                 }))
 
-                await handler(event, writer, context)
+                handler(event, writer, context)
             })
             
         } 
