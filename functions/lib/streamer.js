@@ -1,4 +1,3 @@
-//import { streamer } from "./src/lib/streamer";
 import http from 'http'
 import https from 'https'
 
@@ -81,14 +80,14 @@ export const streamer = (handler) =>
                 status = code
             }
 
-            return Promise((resolve, reject) => {
+            return Promise(async (resolve, reject) => {
                 writer.on('finish', () => resolve({
                     statusCode: status,
                     body: writer.toString(),
                     headers: headers
                 }))
 
-                handler(event, writer, context)
+                await handler(event, writer, context)
             })
             
         } 
