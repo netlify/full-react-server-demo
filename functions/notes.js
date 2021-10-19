@@ -13,12 +13,9 @@ exports.handler = streamer(async function(event, res, context) {
         res.end()
     }
 
-    const match = event.path.match(/^\/notes\/?([^\/]+)?/)
+    const match = even
     if (!match) {
-        return  {
-            statusCode: 404,
-            body: "Not Found"
-        }
+        return  response(JSON.stringify({error: "Not Found"}), 404);
     }
 
     const location = event.queryStringParameters.location && JSON.parse(event.queryStringParameters.location);
