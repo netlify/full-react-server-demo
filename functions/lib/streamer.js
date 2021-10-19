@@ -42,7 +42,10 @@ class Response {
     }
 
     on(event, handler) {
-        console.log("Hmm, got a handler for an event", event)
+        if (event === 'drain') {
+            console.log("Got drain handler, triggering next tick")
+            process.nextTick(handler)
+        }
     }
 
     _doRequest() {
