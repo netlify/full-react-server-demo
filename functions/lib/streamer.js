@@ -46,12 +46,7 @@ class Response {
     }
 
     on(event, handler) {
-        if (event === 'drain') {
-            console.log("Got drain handler, triggering next tick")
-            process.nextTick(handler)
-        } else {
-            console.log("unkown handler", event)
-        }
+        this.req.on(event, handler)
     }
 
     _doRequest() {
