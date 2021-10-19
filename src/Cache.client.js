@@ -27,8 +27,9 @@ export function useServerResponse(location) {
   if (response) {
     return response;
   }
+
   response = createFromFetch(
-    fetch('/.netlify/functions/server?location=' + encodeURIComponent(key))
+    fetch('/.netlify/streamers/server?location=' + encodeURIComponent(key))
   );
   cache.set(key, response);
   return response;
