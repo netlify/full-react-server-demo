@@ -1,7 +1,7 @@
 const path = require("path")
 const webpack = require("webpack")
 
-console.log("Function build with env:", process.env)
+const url = process.env.BRANCH === process.env.MAIN ? process.env.URL : process.env.DEPLOY_PRIME_URL
 
 module.exports = {
   module: {
@@ -16,7 +16,7 @@ module.exports = {
   },
   plugins: [
     new webpack.DefinePlugin({
-        'API_ENDPOINT': `"${process.env.DEPLOY_PRIME_URL || process.env.URL || "http://localhost:8888"}"`,
+        'API_ENDPOINT': `"${url || "http://localhost:8888"}"`,
         'BASE_DIR': `"${__dirname}"`
     })
   ],
