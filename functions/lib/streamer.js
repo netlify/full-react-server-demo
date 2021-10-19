@@ -111,7 +111,10 @@ export const streamer = (handler) =>
         } 
 
         const res = new Response(event)
-        const result = new Promise((resolve) => {
+
+        handler(event, res, context)
+
+        return new Promise((resolve) => {
             res.on('finish', () => {
                 console.log('Done with request')
                 resolve({
@@ -127,8 +130,4 @@ export const streamer = (handler) =>
                 })
             })
         })
-
-        handler(event, res, context)
-
-        return result
     }
