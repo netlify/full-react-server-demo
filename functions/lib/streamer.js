@@ -36,14 +36,14 @@ class Response {
         console.log("Writing to stream", data)
         this._doRequest()
 
-        this._req.write(data)
+        return this._req.write(data)
     }
 
     end() {
         console.log("End stream", data)
         this._doRequest()
 
-        this._req.end()
+        return this._req.end()
     }
 
     on(event, handler) {
