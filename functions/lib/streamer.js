@@ -1,5 +1,6 @@
 import http from 'http'
 import https from 'https'
+import streams from 'memory-streams';
 
 class Response {
     _req = null
