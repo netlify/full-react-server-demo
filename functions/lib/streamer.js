@@ -75,8 +75,6 @@ class Response {
             headers: this._headers
         }
         this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options) : http.request(this._url, options)
-        this._req.on('error', console.error)
-        this._req.on('response', (resp) => console.log('got resp:', resp))
         this._req_events.forEach((e) => {
             this._req.on(e.event, e.handler)
         })
@@ -119,6 +117,13 @@ export const streamer = (handler) =>
                 resolve({
                     statusCode: 200,
                     body: 'Done'
+                })
+            })
+            res.on('error', (err) => {
+                console.error('Error during request', err)
+                resolve({
+                    statusCode: 500,
+                    body: `Error: ${err}`
                 })
             })
         })
