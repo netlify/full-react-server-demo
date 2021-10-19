@@ -41,6 +41,10 @@ class Response {
         this._req.end()
     }
 
+    on(event, handler) {
+        console.log("Hmm, got a handler for an event", event)
+    }
+
     _doRequest() {
         if (this._req) { return }
 
