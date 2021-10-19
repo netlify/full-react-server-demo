@@ -1,18 +1,18 @@
 import {Pool} from 'pg';
+import { streamer } from './lib/streamer'
 import serverComponent from '../src/lib/server-component';
-
-function response(body, status) {
-    console.log("Sending response: ", body, status || 200)
-    return {
-        statusCode: status || 200,
-        body: body,
-        headers: {'Content-Type': 'application/json'}
-    }
-}
 
 const pool = new Pool({connectionString: process.env.PG_URI, ssl: { rejectUnauthorized: false }});
 
-exports.handler = async function(event, context) {
+exports.handler = streamer(async function(event, res, context) {
+    function response(body, status) {
+        console.log("Sending response: ", body, status || 200)
+        res.setStatus(status || 200)
+        res.setHeader('Content-Type', 'application/json')
+        res.write(body)
+        res.end()
+    }
+
     const match = event.path.match(/^\/notes\/?([^\/]+)?/)
     if (!match) {
         return  {
@@ -47,7 +47,7 @@ exports.handler = async function(event, context) {
                     [data.title, data.body, now]
                 ); 
                 const insertedId = result.rows[0].id;
-                return serverComponent(location, insertedId)
+                return serverComponent(location, insertedId, res)
             case 'PUT':
                 if (!noteId) {
                     return response(JSON.stringify({error: "Method not allowed"}), 405)
@@ -57,13 +57,13 @@ exports.handler = async function(event, context) {
                     'update notes set title = $1, body = $2, updated_at = $3 where id = $4',
                     [data.title, data.body, now, updatedId]
                 );
-                return serverComponent(location, null)
+                return serverComponent(location, null, res)
             case 'DELETE':
                 await pool.query('delete from notes where id = $1', [noteId]);
-                return serverComponent(location, null)
+                return serverComponent(location, null, res)
         }
     } catch(err) {
         console.log(err);
         return response(JSON.stringify(err.toString()), 500);
     }
-}
+})
