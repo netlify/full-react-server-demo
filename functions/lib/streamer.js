@@ -20,7 +20,6 @@ class Response {
         if (this._req) {
             throw("Cannot set status after first write")
         }
-        console.log("Setting status", code)
         this._headers[`s-status`] = code
     }
 
@@ -28,26 +27,22 @@ class Response {
         if (this._req) {
             throw("Cannot set headers after first write")
         }
-        console.log("Setting header", key, value)
         this._headers[`s-${key}`] = value
     }
 
     write(data) {
-        console.log("Writing to stream", data)
         this._doRequest()
 
         return this._req.write(data)
     }
 
     end() {
-        console.log("End stream")
         this._doRequest()
 
         return this._req.end()
     }
 
     on(event, handler) {
-        console.log("Registering event handler")
         if (this._req) {
             this._req.on(event, handler)
         } else {
@@ -65,7 +60,6 @@ class Response {
         const options = {
             // eslint-disable-next-line default-param-last
             lookup: (address, opts = {}, callback) => {
-                console.log("Lookup ", address, opts)
                 if (opts.all) {
                     return callback(null, [{ address: ip, family }])
                 }
@@ -85,6 +79,7 @@ class Response {
 export const streamer = (handler) => 
     async (event, context) => {
         if (!event.streaming_response) {
+            console.log("Handling as non streaming", event.path)
             const writer = new streams.WritableStream();
 
             const headers = {}
@@ -110,13 +105,13 @@ export const streamer = (handler) =>
             
         } 
 
+        console.log("Handling as streaming", event.path)
         const res = new Response(event)
 
         handler(event, res, context)
 
         return new Promise((resolve) => {
             res.on('finish', () => {
-                console.log('Done with request')
                 resolve({
                     statusCode: 200,
                     body: 'Done'

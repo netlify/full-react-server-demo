@@ -6,14 +6,13 @@ const pool = new Pool({connectionString: process.env.PG_URI, ssl: { rejectUnauth
 
 exports.handler = streamer(async function(event, res, context) {
     function response(body, status) {
-        console.log("Sending response: ", body, status || 200)
         res.setStatus(status || 200)
         res.setHeader('Content-Type', 'application/json')
         res.write(body)
         res.end()
     }
 
-    const match = even
+    const match = event.path.match(/\/notes\/?([^\/]+)?/)
     if (!match) {
         return  response(JSON.stringify({error: "Not Found"}), 404);
     }

@@ -11,8 +11,6 @@ async function serverComponent(location, redirectToId, res) {
     res.setHeader('Content-Type', 'application/text')
     res.setHeader('X-Location', JSON.stringify(location))
 
-    console.log("pipeNode", res)
-
     return pipeToNodeWritable(React.createElement(App, location), res, moduleMap)
 }
 
