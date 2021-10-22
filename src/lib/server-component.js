@@ -1,5 +1,5 @@
 import React from 'react';
-import {pipeToNodeWritable} from 'react-server-dom-webpack/writer.node.server';
+import {renderToPipeableStream} from 'react-server-dom-webpack/writer.node.server';
 import App from '../App.server';
 import moduleMap from '../../dist/react-client-manifest.json'
 
@@ -11,7 +11,7 @@ async function serverComponent(location, redirectToId, res) {
     res.setHeader('Content-Type', 'application/text')
     res.setHeader('X-Location', JSON.stringify(location))
 
-    return pipeToNodeWritable(React.createElement(App, location), res, moduleMap)
+    return renderToPipeableStream(React.createElement(App, location), moduleMap).pipe(res)
 }
 
 export default serverComponent
