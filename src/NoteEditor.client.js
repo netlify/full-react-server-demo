@@ -18,7 +18,7 @@ export default function NoteEditor({noteId, initialTitle, initialBody}) {
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(initialBody);
   const [location, setLocation] = useLocation();
-  const [startNavigating, isNavigating] = useTransition();
+  const [isNavigating, startNavigating] = useTransition();
   const [isSaving, saveNote] = useMutation({
     endpoint: noteId !== null ? `/notes/${noteId}` : `/notes`,
     method: noteId !== null ? 'PUT' : 'POST',

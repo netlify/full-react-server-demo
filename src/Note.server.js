@@ -38,11 +38,8 @@ export default function Note({selectedId, isEditing}) {
   let {id, title, body, updated_at} = note;
   const updatedAt = new Date(updated_at);
 
-  // We could also read from a file instead.
-  // body = readFile(path.resolve(`./notes/${note.id}.md`), 'utf8');
-
   // Now let's see how the Suspense boundary above lets us not block on this.
-  // fetch('http://localhost:4000/sleep/3000');
+  // fetch(`${API_ENDPOINT}/sleep/3000`).json()
 
   if (isEditing) {
     return <NoteEditor noteId={id} initialTitle={title} initialBody={body} />;

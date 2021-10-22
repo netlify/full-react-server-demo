@@ -6,7 +6,7 @@
  *
  */
 
-import React, {unstable_getCacheForType, unstable_useCacheRefresh} from 'react';
+import {unstable_getCacheForType, unstable_useCacheRefresh} from 'react';
 import {createFromFetch} from 'react-server-dom-webpack';
 
 function createResponseCache() {
@@ -27,7 +27,6 @@ export function useServerResponse(location) {
   if (response) {
     return response;
   }
-
   response = createFromFetch(
     fetch('/.netlify/streamers/server?location=' + encodeURIComponent(key))
   );
