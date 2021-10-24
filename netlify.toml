@@ -13,7 +13,7 @@
     framework = "#custom"
 
 [context.production.environment]
-    LOG_ENDPOINT = "https://webhook.site/247f152c-dcfe-45ba-9462-1c20342bd4c8"
+    LOG_ENDPOINT = "https://logger-test-f755a0.netlify.live/.netlify/functions/log"
 
 [[redirects]]
     from = "/notes/*"
