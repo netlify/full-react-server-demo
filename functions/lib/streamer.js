@@ -5,13 +5,14 @@ import crypto from 'crypto'
 
 let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
 
+let id = null
 let meta = {}
 
 const logger = logURL ? function() {
     const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
             req.write(JSON.stringify({
                 ts: new Date().getTime(),
-                streamer: this._id,
+                streamer: id,
                 msg: arguments,
                 meta
             }))
@@ -107,7 +108,7 @@ class Response {
 
 export const streamer = (handler) => 
     async (event, context) => {
-        meta.stream = crypto.randomBytes(4).toString("hex");
+        id = crypto.randomBytes(4).toString("hex");
         logger(event.headers)
         if (!event.streaming_response) {
             logger("Handling as non streaming", event.path)
