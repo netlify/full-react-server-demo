@@ -12,9 +12,6 @@
     targetPort = 8080
     framework = "#custom"
 
-[context.production.environment]
-    LOG_ENDPOINT = "https://logger-test-81f86b.netlify.live/.netlify/functions/log"
-
 [[redirects]]
     from = "/notes/*"
     to = "/.netlify/streamers/notes/:splat"
