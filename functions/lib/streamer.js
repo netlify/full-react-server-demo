@@ -2,7 +2,6 @@ import http from 'http'
 import https from 'https'
 import streams from 'memory-streams';
 
-let count = 0
 let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
 
 class Response {
@@ -14,7 +13,7 @@ class Response {
 
     constructor(event) {
         const { callback_url, target_ipv4 } = event.streaming_response
-        this._id = count++
+        this._id = crypto.randomBytes(4).toString("hex"); 
         this._url = callback_url
         this._ip = target_ipv4
     }
