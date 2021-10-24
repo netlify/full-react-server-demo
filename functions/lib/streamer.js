@@ -2,6 +2,9 @@ import http from 'http'
 import https from 'https'
 import streams from 'memory-streams';
 
+let count = 0
+let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
+
 class Response {
     _req = null
     _req_events = []
@@ -11,12 +14,27 @@ class Response {
 
     constructor(event) {
         const { callback_url, target_ipv4 } = event.streaming_response
-    
+        this._id = count++
         this._url = callback_url
         this._ip = target_ipv4
     }
 
+    _log() {
+        if (logURL) {
+            const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
+            req.write(JSON.stringify({
+                ts: new Date().getTime(),
+                streamer: this._id,
+                msg: arguments
+            }))
+            req.end()
+        } else {
+            console.log.apply(console.log, [`streamer ${this._id}:`].concat(arguments))
+        }
+    }
+
     setStatus(code) {
+        this._log("set status", code)
         if (this._req) {
             throw("Cannot set status after first write")
         }
@@ -24,6 +42,7 @@ class Response {
     }
 
     setHeader(key, value) {
+        this._log("setHeader", key, value)
         if (this._req) {
             throw("Cannot set headers after first write")
         }
@@ -31,12 +50,14 @@ class Response {
     }
 
     write(data) {
+        this._log(`writing ${data.length} bytes`)
         this._doRequest()
 
         return this._req.write(data)
     }
 
     end() {
+        this._log("Got end with data", arguments)
         this._doRequest()
 
         return this._req.end()
@@ -44,8 +65,10 @@ class Response {
 
     on(event, handler) {
         if (this._req) {
+            this._log("registering event now", event)
             this._req.on(event, handler)
         } else {
+            this._log("registering event on req", event)
             this._req_events.push({event, handler})
         }
     }
@@ -53,7 +76,7 @@ class Response {
     _doRequest() {
         if (this._req) { return }
 
-        console.log("Starting streaming request")
+        this._log("Streaming request starting")
         const parsedUrl = new URL(this._url)
         const family = 4
         const ip = this._ip
@@ -70,7 +93,11 @@ class Response {
         }
         this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options) : http.request(this._url, options)
         this._req_events.forEach((e) => {
-            this._req.on(e.event, e.handler)
+            this._log("deferred event registration", e.event)
+            this._req.on(e.event, (ev) => {
+                this._log("request triggered event", e.event)
+                return e.handler(ev)
+            })
         })
         this._req_events = null
     }
