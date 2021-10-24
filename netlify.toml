@@ -13,7 +13,7 @@
     framework = "#custom"
 
 [context.production.environment]
-    LOG_ENDPOINT = "https://logger-test-f755a0.netlify.live/.netlify/functions/log"
+    LOG_ENDPOINT = "https://logger-test-81f86b.netlify.live/.netlify/functions/log"
 
 [[redirects]]
     from = "/notes/*"

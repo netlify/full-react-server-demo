@@ -5,6 +5,19 @@ import crypto from 'crypto'
 
 let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
 
+let meta = {}
+
+const logger = logURL ? function() {
+    const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
+            req.write(JSON.stringify({
+                ts: new Date().getTime(),
+                streamer: this._id,
+                msg: arguments,
+                meta
+            }))
+            req.end()
+} : console.log
+
 class Response {
     _req = null
     _req_events = []
@@ -14,23 +27,12 @@ class Response {
 
     constructor(event) {
         const { callback_url, target_ipv4 } = event.streaming_response
-        this._id = crypto.randomBytes(4).toString("hex"); 
         this._url = callback_url
         this._ip = target_ipv4
     }
 
     _log() {
-        if (logURL) {
-            const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
-            req.write(JSON.stringify({
-                ts: new Date().getTime(),
-                streamer: this._id,
-                msg: arguments
-            }))
-            req.end()
-        } else {
-            console.log.apply(console.log, [`streamer ${this._id}:`].concat(arguments))
-        }
+        logger(arguments)
     }
 
     setStatus(code) {
@@ -105,8 +107,10 @@ class Response {
 
 export const streamer = (handler) => 
     async (event, context) => {
+        meta.stream = crypto.randomBytes(4).toString("hex");
+        logger(event.headers)
         if (!event.streaming_response) {
-            console.log("Handling as non streaming", event.path)
+            logger("Handling as non streaming", event.path)
             const writer = new streams.WritableStream();
 
             const headers = {}
@@ -132,20 +136,21 @@ export const streamer = (handler) =>
             
         } 
 
-        console.log("Handling as streaming", event.path)
+        logger("Handling as streaming", event.path)
         const res = new Response(event)
 
         handler(event, res, context)
 
         return new Promise((resolve) => {
             res.on('finish', () => {
+                logger("all done")
                 resolve({
                     statusCode: 200,
                     body: 'Done'
                 })
             })
             res.on('error', (err) => {
-                console.error('Error during request', err)
+                logger('Error during request', err)
                 resolve({
                     statusCode: 500,
                     body: `Error: ${err}`
