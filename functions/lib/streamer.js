@@ -10,13 +10,13 @@ let meta = {}
 
 const logger = logURL ? function() {
     const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
-            req.write(JSON.stringify({
-                ts: new Date().getTime(),
-                streamer: id,
-                msg: arguments,
-                meta
-            }))
-            req.end()
+    req.write(JSON.stringify({
+        ts: new Date().getTime(),
+        streamer: id,
+        msg: arguments,
+        meta
+    }))
+    req.end()
 } : console.log
 
 class Response {
@@ -109,7 +109,8 @@ class Response {
 export const streamer = (handler) => 
     async (event, context) => {
         id = crypto.randomBytes(4).toString("hex");
-        logger(event.headers)
+        meta.req_id = event.headers['x-nf-request-id']
+
         if (!event.streaming_response) {
             logger("Handling as non streaming", event.path)
             const writer = new streams.WritableStream();
