@@ -1,6 +1,7 @@
 import http from 'http'
 import https from 'https'
-import streams from 'memory-streams';
+import streams from 'memory-streams'
+import crypto from 'crypto'
 
 let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
 
