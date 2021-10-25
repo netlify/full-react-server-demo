@@ -8,8 +8,15 @@ let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
 let id = null
 let meta = {}
 
+const promises = []
+
 const logger = logURL ? function() {
+    console.log.apply(console.log, arguments)
     const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
+    promises.push(new Promise((resolve) => {
+        req.on("finish", resolve)
+        req.on("error", resolve)
+    }))
     req.write(JSON.stringify({
         ts: new Date().getTime(),
         streamer: id,
@@ -30,6 +37,15 @@ class Response {
         const { callback_url, target_ipv4 } = event.streaming_response
         this._url = callback_url
         this._ip = target_ipv4
+        this._timings = {
+            // use process.hrtime() as it's not a subject of clock drift
+            startAt: new Date(),
+            dnsLookupAt: undefined,
+            tcpConnectionAt: undefined,
+            tlsHandshakeAt: undefined,
+            firstByteAt: undefined,
+            endAt: undefined
+        }
     }
 
     _log() {
@@ -79,13 +95,13 @@ class Response {
     _doRequest() {
         if (this._req) { return }
 
-        this._log("Streaming request starting")
         const parsedUrl = new URL(this._url)
         const family = 4
         const ip = this._ip
         const options = {
             // eslint-disable-next-line default-param-last
             lookup: (address, opts = {}, callback) => {
+                logger("Resolving address", address, "to", ip)
                 if (opts.all) {
                     return callback(null, [{ address: ip, family }])
                 }
@@ -94,15 +110,65 @@ class Response {
             method: 'POST',
             headers: this._headers
         }
-        this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options) : http.request(this._url, options)
-        this._req_events.forEach((e) => {
-            this._log("deferred event registration", e.event)
-            this._req.on(e.event, (ev) => {
-                this._log("request triggered event", e.event)
-                return e.handler(ev)
+        parsedUrl.searchParams.append('stream_id', id)
+        this._log("Streaming request starting", parsedUrl)
+        promises.push(new Promise((resolve) => {
+            const cb = (res) => {
+                logger('got response', res.statusCode)
+                
+                const chunks = []
+                res.once('readable', () => {
+                    this._timings.firstByteAt = new Date()
+                })
+                res.on('data', (d) => chunks.push(d))
+                res.on('end', () => {
+                    this._timings.endAt = new Date()
+
+                    logger("Response data: ", chunks.join(''))
+                    this._logTimings()
+                    resolve()
+                })
+                res.on('error', (err) => {
+                    logger("Request failed: ", err, chunks.join(''))
+                    resolve()
+                })
+            }
+            this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options, cb) : http.request(this._url, options, cb)
+            this._req_events.forEach((e) => {
+                this._log("deferred event registration", e.event)
+                this._req.on(e.event, (ev) => {
+                    this._log("request triggered event", e.event)
+                    return e.handler(ev)
+                })
             })
+            this._req.on('socket', (socket) => {
+                socket.on('lookup', () => {
+                  this._timings.dnsLookupAt = new Date()
+                })
+                socket.on('connect', () => {
+                  this._timings.tcpConnectionAt = new Date()
+                  logger("connect")
+                })
+                socket.on('secureConnect', () => {
+                  this._timings.tlsHandshakeAt = new Date()
+                  logger("secureConnect")
+                })
+              }) 
+            this._req_events = null
+            // TODO: this should be removed, but is working around an edge portal edge case right now
+            this._req.write('\n')
+        }))
+    }
+
+    _logTimings() {
+        logger({
+            dns: this._timings.dnsLookupAt - this._timings.startAt,
+            tcp: this._timings.tcpConnectionAt - (this._timings.dnsLookupAt || this._timings.startAt),
+            tls: this._timings.tlsHandshakeAt - this._timings.tcpConnectionAt,
+            ttfb: this._timings.firstByteAt - (this._timings.tlsHandshakeAt || this._timings.tcpConnectionAt),
+            ctt: this._timings.endAt - (this._timings.firstByteAt),
+            total: this._timings.endAt - this._timings.startAt
         })
-        this._req_events = null
     }
 }
 
@@ -110,6 +176,8 @@ export const streamer = (handler) =>
     async (event, context) => {
         id = crypto.randomBytes(4).toString("hex");
         meta.req_id = event.headers['x-nf-request-id']
+        meta.aws_id = context.awsRequestId
+        meta.aws_arn = context.invokedFunctionArn
 
         if (!event.streaming_response) {
             logger("Handling as non streaming", event.path)
@@ -143,20 +211,9 @@ export const streamer = (handler) =>
 
         handler(event, res, context)
 
-        return new Promise((resolve) => {
-            res.on('finish', () => {
-                logger("all done")
-                resolve({
-                    statusCode: 200,
-                    body: 'Done'
-                })
-            })
-            res.on('error', (err) => {
-                logger('Error during request', err)
-                resolve({
-                    statusCode: 500,
-                    body: `Error: ${err}`
-                })
-            })
-        })
+        console.log("waiting for main request to finish")
+        await Promise.all(promises)
+        console.log("waiting for external logger")
+        await Promise.all(promises)
+        console.log("Execution done")
     }
