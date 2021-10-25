@@ -3,7 +3,8 @@ import https from 'https'
 import streams from 'memory-streams'
 import crypto from 'crypto'
 
-let logURL = process.env.LOG_ENDPOINT && new URL(process.env.LOG_ENDPOINT)
+let logURL = process.env.LOG_ENDPOINT ? new URL(process.env.LOG_ENDPOINT) : null
+console.log(logURL)
 
 let id = null
 let meta = {}
@@ -24,7 +25,15 @@ const logger = logURL ? function() {
         meta
     }))
     req.end()
-} : console.log
+} : function() {
+    console.log.call(console.log, {
+        ts: Date.now(),
+        streamer: id,
+        msg: arguments,
+        meta
+    })
+}
+  
 
 class Response {
     _req = null
