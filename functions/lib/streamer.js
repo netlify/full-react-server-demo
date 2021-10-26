@@ -58,6 +58,7 @@ class Response {
     write(data) {
         this._doRequest()
 
+        process.nextTick(() => this._req.uncork());
         return this._req.write(data)
     }
 
@@ -132,6 +133,7 @@ class Response {
             })
         })
         this._req_events = null
+        this._req.flushHeaders()
     }
 
     _logTimings() {
