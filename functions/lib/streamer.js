@@ -21,6 +21,7 @@ const logger = function() {
 class Response {
     _req = null
     _req_events = []
+    _stream_done = []
     _headers = {}
     _ip = null
     _url = null
@@ -67,6 +68,10 @@ class Response {
     }
 
     on(event, handler) {
+        if (event === 'stream.done') {
+            _stream_done.push(handler)
+            return;
+        }
         if (this._req) {
             this._req.on(event, handler)
         } else {
@@ -93,44 +98,40 @@ class Response {
         }
         parsedUrl.searchParams.append('stream_id', id)
         logger("Streaming request starting", parsedUrl)
-        promises.push(new Promise((resolve) => {
-            const cb = (res) => {
-                logger('got response', res.statusCode)
+        const cb = (res) => {
+            logger('got response', res.statusCode)
 
-                const chunks = []
-                res.once('readable', () => {
-                    this._timings.firstByteAt = new Date()
-                })
-                res.on('data', (d) => chunks.push(d))
-                res.on('end', () => {
-                    this._timings.endAt = new Date()
-
-                    this._logTimings()
-                    resolve()
-                })
-                res.on('error', (err) => {
-                    resolve()
-                })
-            }
-            this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options, cb) : http.request(this._url, options, cb)
-            this._req_events.forEach((e) => {
-                this._req.on(e.event, (ev) => e.handler(ev))
+            const chunks = []
+            res.once('readable', () => {
+                this._timings.firstByteAt = new Date()
             })
-            this._req.on('socket', (socket) => {
-                socket.on('lookup', () => {
-                  this._timings.dnsLookupAt = new Date()
-                })
-                socket.on('connect', () => {
-                  this._timings.tcpConnectionAt = new Date()
-                })
-                socket.on('secureConnect', () => {
-                  this._timings.tlsHandshakeAt = new Date()
-                })
-              })
-            this._req_events = null
-            this._req.flushHeaders()
-            this._req.write('\n')
-        }))
+            res.on('data', (d) => chunks.push(d))
+            res.on('end', () => {
+                this._timings.endAt = new Date()
+
+                this._logTimings()
+                this._streamDone()
+            })
+            res.on('error', (err) => {
+                this._streamDone(err)
+            })
+        }
+        this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options, cb) : http.request(this._url, options, cb)
+        this._req_events.forEach((e) => {
+            this._req.on(e.event, (ev) => e.handler(ev))
+        })
+        this._req.on('socket', (socket) => {
+            socket.on('lookup', () => {
+            this._timings.dnsLookupAt = new Date()
+            })
+            socket.on('connect', () => {
+            this._timings.tcpConnectionAt = new Date()
+            })
+            socket.on('secureConnect', () => {
+            this._timings.tlsHandshakeAt = new Date()
+            })
+        })
+        this._req_events = null
     }
 
     _logTimings() {
@@ -142,6 +143,10 @@ class Response {
             ctt: this._timings.endAt - (this._timings.firstByteAt),
             total: this._timings.endAt - this._timings.startAt
         })
+    }
+
+    _streamDone(err) {
+        this._stream_done.forEach(h => h(err))
     }
 }
 
@@ -185,15 +190,15 @@ export const streamer = (handler) =>
 
         logger("Handling as streaming", event.path)
         const res = new Response(event)
+        const done = new Promise((resolve) => res.on('stream.done', resolve))
 
-        handler(event, context, res)
-
-        promises.push(new Promise((resolve) => {
-            res.on('finish', resolve)
-            res.on('error', resolve)
-        }))
+        if (handler.length === 2) {
+            handler(event, res)
+        } else {
+            handler(event, context, res)
+        }
 
         logger("waiting for streaming request to finish")
-        await Promise.all(promises)
+        await done
         logger("Streaming execution done")
     }
