@@ -4,7 +4,7 @@ import serverComponent from '../src/lib/server-component';
 
 const pool = new Pool({connectionString: process.env.PG_URI, ssl: { rejectUnauthorized: false }});
 
-exports.handler = streamer(async function(event, res, context) {
+exports.handler = streamer(async function(event, context, res) {
     function response(body, status) {
         res.setStatus(status || 200)
         res.setHeader('Content-Type', 'application/json')

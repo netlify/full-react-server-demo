@@ -1,39 +1,22 @@
-import http from 'http'
-import https from 'https'
-import streams from 'memory-streams'
-import crypto from 'crypto'
+const crypto = require('crypto')
+const http = require('http')
+const https = require('https')
 
-let logURL = process.env.LOG_ENDPOINT ? new URL(process.env.LOG_ENDPOINT) : null
-console.log(logURL)
+const streams = require('memory-streams')
 
 let id = null
-let meta = {}
+const meta = {}
 
 const promises = []
 
-const logger = logURL ? function() {
-    console.log.apply(console.log, arguments)
-    const req = https.request(logURL, {method: "POST", headers: {"Content-Type": "application/json"}})
-    promises.push(new Promise((resolve) => {
-        req.on("finish", resolve)
-        req.on("error", resolve)
-    }))
-    req.write(JSON.stringify({
-        ts: new Date().getTime(),
-        streamer: id,
-        msg: arguments,
-        meta
-    }))
-    req.end()
-} : function() {
-    console.log.call(console.log, {
-        ts: Date.now(),
-        streamer: id,
-        msg: arguments,
-        meta
-    })
+const logger = function() {
+  console.log.apply(console.log, {
+    ts: Date.now(),
+    streamer: id,
+    msg: arguments,
+    meta
+  })
 }
-  
 
 class Response {
     _req = null
@@ -47,7 +30,6 @@ class Response {
         this._url = callback_url
         this._ip = target_ipv4
         this._timings = {
-            // use process.hrtime() as it's not a subject of clock drift
             startAt: new Date(),
             dnsLookupAt: undefined,
             tcpConnectionAt: undefined,
@@ -57,12 +39,8 @@ class Response {
         }
     }
 
-    _log() {
-        logger(arguments)
-    }
 
     setStatus(code) {
-        this._log("set status", code)
         if (this._req) {
             throw("Cannot set status after first write")
         }
@@ -70,7 +48,6 @@ class Response {
     }
 
     setHeader(key, value) {
-        this._log("setHeader", key, value)
         if (this._req) {
             throw("Cannot set headers after first write")
         }
@@ -78,14 +55,12 @@ class Response {
     }
 
     write(data) {
-        this._log(`writing ${data.length} bytes`)
         this._doRequest()
 
         return this._req.write(data)
     }
 
     end() {
-        this._log("Got end with data", arguments)
         this._doRequest()
 
         return this._req.end()
@@ -93,10 +68,8 @@ class Response {
 
     on(event, handler) {
         if (this._req) {
-            this._log("registering event now", event)
             this._req.on(event, handler)
         } else {
-            this._log("registering event on req", event)
             this._req_events.push({event, handler})
         }
     }
@@ -110,7 +83,6 @@ class Response {
         const options = {
             // eslint-disable-next-line default-param-last
             lookup: (address, opts = {}, callback) => {
-                logger("Resolving address", address, "to", ip)
                 if (opts.all) {
                     return callback(null, [{ address: ip, family }])
                 }
@@ -120,11 +92,11 @@ class Response {
             headers: this._headers
         }
         parsedUrl.searchParams.append('stream_id', id)
-        this._log("Streaming request starting", parsedUrl)
+        logger("Streaming request starting", parsedUrl)
         promises.push(new Promise((resolve) => {
             const cb = (res) => {
                 logger('got response', res.statusCode)
-                
+
                 const chunks = []
                 res.once('readable', () => {
                     this._timings.firstByteAt = new Date()
@@ -133,22 +105,16 @@ class Response {
                 res.on('end', () => {
                     this._timings.endAt = new Date()
 
-                    logger("Response data: ", chunks.join(''))
                     this._logTimings()
                     resolve()
                 })
                 res.on('error', (err) => {
-                    logger("Request failed: ", err, chunks.join(''))
                     resolve()
                 })
             }
             this._req = parsedUrl.protocol === 'https:' ? https.request(this._url, options, cb) : http.request(this._url, options, cb)
             this._req_events.forEach((e) => {
-                this._log("deferred event registration", e.event)
-                this._req.on(e.event, (ev) => {
-                    this._log("request triggered event", e.event)
-                    return e.handler(ev)
-                })
+                this._req.on(e.event, (ev) => e.handler(ev))
             })
             this._req.on('socket', (socket) => {
                 socket.on('lookup', () => {
@@ -156,16 +122,13 @@ class Response {
                 })
                 socket.on('connect', () => {
                   this._timings.tcpConnectionAt = new Date()
-                  logger("connect")
                 })
                 socket.on('secureConnect', () => {
                   this._timings.tlsHandshakeAt = new Date()
-                  logger("secureConnect")
                 })
-              }) 
+              })
             this._req_events = null
-            // TODO: this should be removed, but is working around an edge portal edge case right now
-            this._req.write('\n')
+            this._req.flushHeaders()
         }))
     }
 
@@ -181,19 +144,19 @@ class Response {
     }
 }
 
-export const streamer = (handler) => 
+export const streamer = (handler) =>
     async (event, context) => {
         id = crypto.randomBytes(4).toString("hex");
         meta.req_id = event.headers['x-nf-request-id']
-        meta.aws_id = context.awsRequestId
-        meta.aws_arn = context.invokedFunctionArn
+        // meta.aws_id = context.awsRequestId
+        // meta.aws_arn = context.invokedFunctionArn
 
         if (!event.streaming_response) {
             logger("Handling as non streaming", event.path)
             const writer = new streams.WritableStream();
 
             const headers = {}
-            var status = 200
+            let status = 200
 
             writer.setHeader = (key, value) => {
                 headers[key] = value
@@ -207,22 +170,24 @@ export const streamer = (handler) =>
                 writer.on('finish', () => resolve({
                     statusCode: status,
                     body: writer.toString(),
-                    headers: headers
+                    headers
                 }))
 
-                handler(event, writer, context)
+                if (handler.length === 2) {
+                    handler(event, writer)
+                } else {
+                    handler(event, context, writer)
+                }
             })
-            
-        } 
+
+        }
 
         logger("Handling as streaming", event.path)
         const res = new Response(event)
 
-        handler(event, res, context)
+        handler(event, context, res)
 
-        console.log("waiting for main request to finish")
+        logger("waiting for streaming request to finish")
         await Promise.all(promises)
-        console.log("waiting for external logger")
-        await Promise.all(promises)
-        console.log("Execution done")
+        logger("Streaming xecution done")
     }
