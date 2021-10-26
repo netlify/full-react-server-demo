@@ -129,6 +129,10 @@ class Response {
               })
             this._req_events = null
             this._req.flushHeaders()
+            promises.push(new Promise((resolve) => {
+                this._req.on('finish', resolve)
+                this._req.on('error', resolve)
+            }))
         }))
     }
 
