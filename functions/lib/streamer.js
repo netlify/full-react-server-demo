@@ -10,7 +10,7 @@ const meta = {}
 const promises = []
 
 const logger = function() {
-  console.log.apply(console.log, {
+  console.log.call(console.log, {
     ts: Date.now(),
     streamer: id,
     msg: arguments,
@@ -129,10 +129,6 @@ class Response {
               })
             this._req_events = null
             this._req.flushHeaders()
-            promises.push(new Promise((resolve) => {
-                this._req.on('finish', resolve)
-                this._req.on('error', resolve)
-            }))
         }))
     }
 
@@ -193,5 +189,5 @@ export const streamer = (handler) =>
 
         logger("waiting for streaming request to finish")
         await Promise.all(promises)
-        logger("Streaming xecution done")
+        logger("Streaming execution done")
     }
