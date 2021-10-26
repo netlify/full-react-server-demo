@@ -69,7 +69,7 @@ class Response {
 
     on(event, handler) {
         if (event === 'stream.done') {
-            _stream_done.push(handler)
+            this._stream_done.push(handler)
             return;
         }
         if (this._req) {
