@@ -129,6 +129,7 @@ class Response {
               })
             this._req_events = null
             this._req.flushHeaders()
+            this._req.write('\n')
         }))
     }
 
