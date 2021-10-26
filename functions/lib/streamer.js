@@ -187,6 +187,11 @@ export const streamer = (handler) =>
 
         handler(event, context, res)
 
+        promises.push(new Promise((resolve) => {
+            res.on('finish', resolve)
+            res.on('error', resolve)
+        }))
+
         logger("waiting for streaming request to finish")
         await Promise.all(promises)
         logger("Streaming execution done")
