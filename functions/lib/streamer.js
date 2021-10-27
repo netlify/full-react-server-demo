@@ -133,7 +133,6 @@ class Response {
             })
         })
         this._req_events = null
-        this._req.flushHeaders()
     }
 
     _logTimings() {
@@ -201,6 +200,5 @@ export const streamer = (handler) =>
         }
 
         logger("waiting for streaming request to finish")
-        await done
-        logger("Streaming execution done")
+        return done
     }
